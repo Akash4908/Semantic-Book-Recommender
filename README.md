@@ -1,4 +1,3 @@
-![Project Thumbnail](Designer.jpeg)
 # 📚 Semantic Book Recommender
 
 An interactive web application that recommends books based on semantic similarity using LangChain, Hugging Face transformers, and Flask.
