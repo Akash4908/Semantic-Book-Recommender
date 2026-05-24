@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Book Recommender</title>
+    <meta name="description" content="Discover your next great read with AI-powered semantic book recommendations.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #111113;
+            --bg-card: #161618;
+            --bg-elevated: #1c1c1f;
+            --bg-input: #1a1a1d;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-focus: rgba(255, 255, 255, 0.15);
+            --text-primary: #e8e8ea;
+            --text-secondary: #8b8b92;
+            --text-muted: #55555c;
+            --accent: #a78bfa;
+            --accent-dim: rgba(167, 139, 250, 0.12);
+            --accent-glow: rgba(167, 139, 250, 0.06);
+            --star: #f5c542;
+            --danger: #ef4444;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --transition: 0.2s ease;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Subtle top gradient accent */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 60px 24px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Search */
+        .search-section {
+            margin-bottom: 40px;
+            animation: fadeIn 0.6s ease-out 0.1s both;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 18px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.925rem;
+            line-height: 1.6;
+            resize: vertical;
+            min-height: 110px;
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-btn {
+            width: 100%;
+            margin-top: 12px;
+            padding: 14px 24px;
+            background: var(--accent);
+            color: #0a0a0b;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity var(--transition), transform var(--transition);
+        }
+
+        .search-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+            opacity: 0.8;
+        }
+
+        .search-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Example Queries */
+        .examples {
+            margin-top: 20px;
+            animation: fadeIn 0.6s ease-out 0.2s both;
+        }
+
+        .examples-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+
+        .example-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example-chip {
+            padding: 7px 14px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 100px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+
+        .example-chip:hover {
+            color: var(--text-primary);
+            border-color: var(--border-focus);
+            background: var(--bg-card);
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 48px 0;
+        }
+
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 2px solid var(--border-subtle);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        .loading-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Results */
+        .results-section {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .results-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .results-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .results-query {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            font-style: italic;
+        }
+
+        /* Book Cards */
+        .book-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .book-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            transition: border-color var(--transition), transform var(--transition);
+            animation: slideUp 0.35s ease-out both;
+        }
+
+        .book-card:hover {
+            border-color: var(--border-focus);
+            transform: translateY(-2px);
+        }
+
+        .book-top {
+            display: flex;
+            gap: 16px;
+        }
+
+        .book-cover {
+            width: 64px;
+            height: 96px;
+            min-width: 64px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            background: var(--bg-elevated);
+        }
+
+        .book-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .book-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .book-author {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .book-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .rating-star {
+            color: var(--star);
+            font-size: 0.75rem;
+        }
+
+        .rating-value {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .category-badge {
+            padding: 3px 10px;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .similarity-badge {
+            padding: 3px 10px;
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .book-desc {
+            margin-top: 12px;
+            font-size: 0.825rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        /* Error */
+        .error-toast {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 16px 60px;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
+            }
+
+            .example-chips {
+                flex-direction: column;
+            }
+
+            .example-chip {
+                white-space: normal;
+            }
+
+            .book-cover {
+                width: 52px;
+                height: 78px;
+                min-width: 52px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Semantic Book Recommender</h1>
+            <p>Describe what you want to read — AI finds the match.</p>
+        </header>
+
+        <section class="search-section">
+            <form id="searchForm">
+                <textarea
+                    class="search-input"
+                    id="queryInput"
+                    placeholder="Describe the kind of book you're looking for..."
+                    required
+                ></textarea>
+                <button type="submit" class="search-btn" id="searchBtn">
+                    Find Books
+                </button>
+            </form>
+
+            <div class="examples">
+                <div class="examples-label">Try these</div>
+                <div class="example-chips">
+                    <span class="example-chip" onclick="fillExample('A contemplative exploration of human consciousness')">consciousness & philosophy</span>
+                    <span class="example-chip" onclick="fillExample('Complex psychological thriller with unreliable narration')">psychological thriller</span>
+                    <span class="example-chip" onclick="fillExample('Science fiction about the intersection of technology and humanity')">sci-fi & technology</span>
+                    <span class="example-chip" onclick="fillExample('A heartwarming story about friendship and growing up')">friendship & coming-of-age</span>
+                    <span class="example-chip" onclick="fillExample('Literary fiction exploring intergenerational trauma and cultural identity')">cultural identity</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Searching through the library...</div>
+        </div>
+
+        <div id="errorMessage"></div>
+
+        <section class="results-section" id="resultsSection">
+            <div class="results-header">
+                <span class="results-title">Recommendations</span>
+                <span class="results-count" id="resultsCount"></span>
+            </div>
+            <div class="results-query" id="queryDisplay"></div>
+            <div class="book-list" id="resultsGrid"></div>
+        </section>
+    </div>
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const queryInput = document.getElementById('queryInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const loading = document.getElementById('loading');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsGrid = document.getElementById('resultsGrid');
+        const queryDisplay = document.getElementById('queryDisplay');
+        const resultsCount = document.getElementById('resultsCount');
+        const errorMessage = document.getElementById('errorMessage');
+
+        function fillExample(text) {
+            queryInput.value = text;
+            queryInput.focus();
+        }
+
+        function showError(message) {
+            errorMessage.innerHTML = `<div class="error-toast">${message}</div>`;
+            setTimeout(() => { errorMessage.innerHTML = ''; }, 5000);
+        }
+
+        function renderStars(rating) {
+            const full = Math.floor(rating);
+            const empty = 5 - full;
+            return '★'.repeat(full) + '☆'.repeat(empty);
+        }
+
+        function createBookCard(book, index) {
+            const fallbackCover = `data:image/svg+xml,${encodeURIComponent(`<svg width="64" height="96" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="96" fill="#1c1c1f"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#55555c" font-size="10" font-family="sans-serif">No Cover</text></svg>`)}`;
+
+            return `
+                <div class="book-card" style="animation-delay: ${index * 0.06}s">
+                    <div class="book-top">
+                        <img src="${book.thumbnail}" alt="${book.title}" class="book-cover"
+                             onerror="this.src='${fallbackCover}'">
+                        <div class="book-details">
+                            <div class="book-title">${book.title}</div>
+                            <div class="book-author">${book.authors}</div>
+                            <div class="book-meta">
+                                <span class="rating">
+                                    <span class="rating-star">${renderStars(book.rating)}</span>
+                                    <span class="rating-value">${book.rating.toFixed(1)}</span>
+                                </span>
+                                <span class="similarity-badge">${book.similarity}% match</span>
+                                ${book.pages > 0 ? `<span class="meta-tag">${book.pages} pages</span>` : ''}
+                                ${book.year > 0 ? `<span class="meta-tag">${book.year}</span>` : ''}
+                                <span class="category-badge">${book.category}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="book-desc">${book.description}</p>
+                </div>
+            `;
+        }
+
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = queryInput.value.trim();
+            if (!query) { showError('Please enter a description.'); return; }
+
+            searchBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsSection.style.display = 'none';
+            errorMessage.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Something went wrong');
+
+                queryDisplay.textContent = `"${query}"`;
+                resultsCount.textContent = `${data.recommendations.length} results`;
+                resultsGrid.innerHTML = data.recommendations.map((book, i) => createBookCard(book, i)).join('');
+                resultsSection.style.display = 'block';
+
+                setTimeout(() => {
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 200);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.style.display = 'none';
+                searchBtn.disabled = false;
+            }
+        });
+
+        // Health check
+        fetch('/api/health')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.system_ready) showError('System is still initializing. Please wait a moment.');
+            })
+            .catch(() => showError('Unable to connect to the server.'));
+    </script>
+</body>
+</html>
